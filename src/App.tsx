@@ -13,6 +13,9 @@ import {
   Split,
   Shield,
   Zap,
+  Volume2,
+  Play,
+  Printer,
 } from 'lucide-react';
 import { AgeBandKey, SelectedEntity, RecommendationResponse, LLMComparisonResponse } from './types.ts';
 import { AgeBandSelector } from './components/AgeBandSelector.tsx';
@@ -22,6 +25,9 @@ import { AgentStatusTimeline } from './components/AgentStatusTimeline.tsx';
 import { HowQlooPowersThis } from './components/HowQlooPowersThis.tsx';
 import { LLMComparisonView } from './components/LLMComparisonView.tsx';
 import { SecurityChecklistModal } from './components/SecurityChecklistModal.tsx';
+import { GuidedTour } from './components/GuidedTour.tsx';
+import { TasteGraphVisualizer } from './components/TasteGraphVisualizer.tsx';
+import { ReadingPassportModal } from './components/ReadingPassportModal.tsx';
 
 export default function App() {
   const [selectedAgeBand, setSelectedAgeBand] = useState<AgeBandKey>('primary');
@@ -47,6 +53,12 @@ export default function App() {
   // Security checklist modal
   const [showSecurityModal, setShowSecurityModal] = useState(false);
 
+  // Classroom reading passport modal
+  const [showPassportModal, setShowPassportModal] = useState(false);
+
+  // Guided tour state
+  const [tourActive, setTourActive] = useState(false);
+
   // Presets from server
   const [presets, setPresets] = useState<any[]>([]);
 
@@ -60,6 +72,21 @@ export default function App() {
       })
       .catch(() => {});
   }, []);
+
+  const handleEnsureResultsForTour = () => {
+    if (!recommendationResult && !loading) {
+      handleRunAgent();
+    }
+  };
+
+  const handleEnsureComparisonForTour = () => {
+    if (!showComparison) {
+      setShowComparison(true);
+      if (!llmComparisonData && !loadingLLM) {
+        fetchLLMComparison();
+      }
+    }
+  };
 
   const handleApplyPreset = (preset: any) => {
     setSelectedAgeBand(preset.ageBand);
@@ -161,7 +188,7 @@ export default function App() {
 
       {/* Main Header */}
       <header className="bg-white border-b border-slate-200 shadow-xs">
-        <div className="max-w-6xl mx-auto px-4 py-5 sm:px-6 flex flex-wrap items-center justify-between gap-4">
+        <div id="tour-header" className="max-w-6xl mx-auto px-4 py-5 sm:px-6 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-600/20">
               <BookOpen className="w-5 h-5" />
@@ -180,7 +207,23 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Green Guided Tour Button */}
             <button
+              id="tour-play-button"
+              type="button"
+              onClick={() => setTourActive((prev) => !prev)}
+              className={`text-xs font-bold px-3.5 py-2 rounded-xl border flex items-center gap-2 transition-all cursor-pointer shadow-sm ${
+                tourActive
+                  ? 'bg-emerald-700 text-white border-emerald-800 ring-2 ring-emerald-400'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500 hover:shadow-md'
+              }`}
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>{tourActive ? 'Guided Tour Playing...' : 'Take Guided Tour (Audio Demo)'}</span>
+            </button>
+
+            <button
+              id="tour-security-button"
               type="button"
               onClick={() => setShowSecurityModal(true)}
               className="text-xs font-semibold px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
@@ -195,13 +238,15 @@ export default function App() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-8 sm:px-6 space-y-8">
         {/* Architecture Spotlight Panel */}
-        <HowQlooPowersThis />
+        <div id="tour-qloo-panel">
+          <HowQlooPowersThis />
+        </div>
 
         {/* Input & Selection Console */}
         <section className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-6">
           {/* Quick Presets for Judges */}
           {presets.length > 0 && (
-            <div className="space-y-2">
+            <div id="tour-presets" className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1">
                   <Zap className="w-3.5 h-3.5 text-amber-500" />
@@ -228,21 +273,25 @@ export default function App() {
           )}
 
           {/* 1. Age Band Selector */}
-          <AgeBandSelector
-            selectedBand={selectedAgeBand}
-            onSelect={setSelectedAgeBand}
-            disabled={loading}
-          />
+          <div id="tour-age-band">
+            <AgeBandSelector
+              selectedBand={selectedAgeBand}
+              onSelect={setSelectedAgeBand}
+              disabled={loading}
+            />
+          </div>
 
           {/* 2. Entity Picker (Games / TV) */}
-          <EntityPicker
-            selectedEntities={selectedEntities}
-            onChange={setSelectedEntities}
-            disabled={loading}
-          />
+          <div id="tour-entity-picker">
+            <EntityPicker
+              selectedEntities={selectedEntities}
+              onChange={setSelectedEntities}
+              disabled={loading}
+            />
+          </div>
 
           {/* 3. Short Reads Toggle & Settings */}
-          <div className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
+          <div id="tour-short-reads" className="pt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
             <label className="flex items-center gap-3 cursor-pointer group">
               <div className="relative inline-flex items-center">
                 <input
@@ -310,7 +359,7 @@ export default function App() {
 
         {/* Results Section */}
         {recommendationResult && (
-          <section className="space-y-6">
+          <section id="tour-results" className="space-y-6">
             {/* Top Results Control Bar */}
             <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-4">
               <div>
@@ -328,19 +377,33 @@ export default function App() {
                 </p>
               </div>
 
-              {/* Compare with LLM-Only Toggle Switch */}
-              <button
-                type="button"
-                onClick={handleToggleComparison}
-                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
-                  showComparison
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
-                }`}
-              >
-                <Split className="w-4 h-4" />
-                {showComparison ? 'Exit Side-by-Side View' : 'Compare with LLM-only'}
-              </button>
+              <div className="flex items-center gap-2">
+                {/* Print Reading Passport Button */}
+                <button
+                  id="tour-reading-passport"
+                  type="button"
+                  onClick={() => setShowPassportModal(true)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-500 hover:bg-amber-400 text-slate-950 flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Classroom Passport</span>
+                </button>
+
+                {/* Compare with LLM-Only Toggle Switch */}
+                <button
+                  id="tour-comparison-toggle"
+                  type="button"
+                  onClick={handleToggleComparison}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 cursor-pointer ${
+                    showComparison
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                  }`}
+                >
+                  <Split className="w-4 h-4" />
+                  {showComparison ? 'Exit Side-by-Side' : 'Compare with LLM-only'}
+                </button>
+              </div>
             </div>
 
             {/* Agentic Trace Timeline */}
@@ -348,6 +411,14 @@ export default function App() {
               logs={recommendationResult.agentLogs}
               meta={recommendationResult.meta}
             />
+
+            {/* Interactive Cultural Taste Graph Bridge */}
+            <div id="tour-taste-graph">
+              <TasteGraphVisualizer
+                inputEntities={selectedEntities}
+                recommendedBooks={recommendationResult.books}
+              />
+            </div>
 
             {/* Results: Either Side-by-Side or Full Cards Grid */}
             {showComparison ? (
@@ -358,7 +429,7 @@ export default function App() {
                 loadingLLM={loadingLLM}
               />
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div id="tour-teacher-note" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recommendationResult.books.map((book, idx) => (
                   <BookCard key={book.entity_id} book={book} index={idx} />
                 ))}
@@ -380,6 +451,23 @@ export default function App() {
           </section>
         )}
       </main>
+
+      {/* Classroom Reading Passport Modal */}
+      <ReadingPassportModal
+        isOpen={showPassportModal}
+        onClose={() => setShowPassportModal(false)}
+        studentSeeds={selectedEntities}
+        books={recommendationResult ? recommendationResult.books : []}
+        ageBandLabel={recommendationResult ? recommendationResult.meta.ageBandLabel : ''}
+      />
+
+      {/* Guided Tour Component */}
+      <GuidedTour
+        isActive={tourActive}
+        onClose={() => setTourActive(false)}
+        onEnsureResults={handleEnsureResultsForTour}
+        onEnsureComparison={handleEnsureComparisonForTour}
+      />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-200 py-6 mt-12 text-xs text-slate-500">
