@@ -1,0 +1,6 @@
+{
+  "name": "ReadNext",
+  "description": "Agentic book recommendation engine for teachers and librarians powered by Qloo's taste graph and Gemini safety gate.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
